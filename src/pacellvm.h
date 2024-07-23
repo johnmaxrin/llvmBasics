@@ -2,10 +2,13 @@
 #define PACELLVM_H
 
 #include <string>
+#include <iostream>
 
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Verifier.h"
+
 
 
 class Pacellvm {
@@ -14,11 +17,14 @@ class Pacellvm {
         Pacellvm(){
             moduleInit();
         }
-        
-        
+ 
         void run(const std::string &program){
 
+            compile();
+            
             module->print(llvm::outs(), nullptr); 
+            std::cout<<"\n";
+
             saveModuleToFile("pacelang.ll");
         }
 
@@ -27,6 +33,66 @@ class Pacellvm {
         std::unique_ptr<llvm::LLVMContext> context; 
         std::unique_ptr<llvm::Module> module;
         std::unique_ptr<llvm::IRBuilder<>> builder;
+        
+        // Current Compiling function
+        llvm::Function* fn;
+
+        void compile(){
+            // i. Create main function:
+            fn = createFunction("main", 
+                        llvm::FunctionType::get(builder->getInt32Ty(),false));
+
+
+            // ii. Compile main body.
+            // For this lesson, Just return 33.
+            auto res = gen();
+            
+            // iii. Cast to i32 to return from main. 
+            auto i32Result = 
+                builder->CreateIntCast(res, builder->getInt32Ty(), true);
+            
+            builder->CreateRet(i32Result);
+        }
+
+        llvm::Value* gen()
+        { return builder->getInt32(33); }
+
+        // To create a function we need it's name and type. 
+        llvm::Function* createFunction(const std::string& fnName,
+                                        llvm::FunctionType* fnType)
+        {
+            auto fn = module->getFunction(fnName);
+
+            if(fn == nullptr)
+                fn = createFunctionProtoType(fnName, fnType);
+            
+            createFunctionBlock(fn);
+            return fn;
+        }
+
+
+        llvm::Function* createFunctionProtoType(const std::string& fnName,
+                                        llvm::FunctionType* fnType)
+        {
+            auto fn = llvm::Function::Create(fnType, 
+                            llvm::Function::ExternalLinkage,
+                            fnName, *module);
+            verifyFunction(*fn);
+            return fn;
+
+        }
+
+        void createFunctionBlock(llvm::Function* fn)
+        {
+            auto entry = createBB("entry", fn);
+            builder->SetInsertPoint(entry);
+        }
+
+        llvm::BasicBlock* createBB(const std::string name,
+                                 llvm::Function* fn=nullptr)
+        {
+            return llvm::BasicBlock::Create(*context, name,fn);
+        }
 
         void moduleInit(){
             context = std::make_unique<llvm::LLVMContext>();
