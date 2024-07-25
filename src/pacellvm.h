@@ -16,6 +16,7 @@ class Pacellvm {
     public:
         Pacellvm(){
             moduleInit();
+            setupExternFunctions();
         }
  
         void run(const std::string &program){
@@ -45,17 +46,31 @@ class Pacellvm {
 
             // ii. Compile main body.
             // For this lesson, Just return 33.
-            auto res = gen();
+            gen();
+            builder->CreateRet(builder->getInt32(0));
+        }
+        
+        llvm::Value* gen()
+        { 
             
-            // iii. Cast to i32 to return from main. 
-            auto i32Result = 
-                builder->CreateIntCast(res, builder->getInt32Ty(), true);
-            
-            builder->CreateRet(i32Result);
+            auto str = builder->CreateGlobalStringPtr("Hello World\n");
+            auto printfFn = module->getFunction("printf");
+
+            std::vector<llvm::Value*> args{str};
+            return builder->CreateCall(printfFn,args);
+
         }
 
-        llvm::Value* gen()
-        { return builder->getInt32(33); }
+
+        void setupExternFunctions()
+        {
+            auto bytePtrTy = builder->getInt8Ty()->getPointerTo();
+            module->getOrInsertFunction("printf",
+                                        llvm::FunctionType::get(
+                                            builder->getInt32Ty(),
+                                            bytePtrTy,
+                                            true));
+        }
 
         // To create a function we need it's name and type. 
         llvm::Function* createFunction(const std::string& fnName,
