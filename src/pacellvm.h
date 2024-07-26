@@ -46,8 +46,8 @@ class Pacellvm {
 
             // ii. Compile main body.
             // For this lesson, Just return 33.
-            gen();
-            builder->CreateRet(builder->getInt32(0));
+            llvm::Value *res =  gen();
+            builder->CreateRet(res);
         }
         
         llvm::Value* gen()
@@ -57,7 +57,17 @@ class Pacellvm {
             auto printfFn = module->getFunction("printf");
 
             std::vector<llvm::Value*> args{str};
-            return builder->CreateCall(printfFn,args);
+            builder->CreateCall(printfFn,args);
+            
+            llvm::AllocaInst *alloc = builder->CreateAlloca(builder->getInt32Ty(), nullptr, "apple");
+            builder->CreateStore(builder->getInt32(33), alloc);
+            auto load = builder->CreateLoad(builder->getInt32Ty(), alloc);
+
+
+
+            return load;
+
+            //return builder->CreateCall(printfFn,args);
 
         }
 
