@@ -9,7 +9,9 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Verifier.h"
 
+#include "../include/ast/ast.h"
 
+Expression* root; 
 
 class Pacellvm {
 
@@ -19,9 +21,9 @@ class Pacellvm {
             setupExternFunctions();
         }
  
-        void run(const std::string &program){
+        void run(const std::string &program, Expression* root){
 
-            compile();
+            compile(root);
             
             module->print(llvm::outs(), nullptr); 
             std::cout<<"\n";
@@ -38,7 +40,7 @@ class Pacellvm {
         // Current Compiling function
         llvm::Function* fn;
 
-        void compile(){
+        void compile(Expression* root){
             // i. Create main function:
             fn = createFunction("main", 
                         llvm::FunctionType::get(builder->getInt32Ty(),false));
